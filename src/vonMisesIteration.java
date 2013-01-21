@@ -2,6 +2,7 @@ import Jama.Matrix;
 
 public class vonMisesIteration {
 	static Matrix rotation;
+	static Matrix identity;
 	static {
 		double mat[][] = {
 				{0, -1, 0,  0,  0, 0},
@@ -12,6 +13,15 @@ public class vonMisesIteration {
 				{0, 0, 0,  0,  1, 0},
 		};
 		rotation = new Matrix(mat);
+		double ide[][] = {
+				{1, 0, 0, 0, 0, 0},
+				{0, 1, 0, 0, 0, 0},
+				{0, 0, 1, 0, 0, 0},
+				{0, 0, 0, 1, 0, 0},
+				{0, 0, 0, 0, 1, 0},
+				{0, 0, 0, 0, 0, 1},
+		};
+		identity = new Matrix(ide);
 	}
 	public static void main(String[] argv) {
 		double doubleMatA[][] = {
@@ -34,32 +44,46 @@ public class vonMisesIteration {
 		System.out.println(getEigenvalue(matA, vectorB));
 		vectorB.print(8, 6);
 		
-		vectorB = rotation.times(vectorB);	
-		vectorB = computeVonMisesIteration(matA, vectorB, 10);
+		vectorB = normalize(Matrix.random(6, 1));	
+		vectorB = computeRayleighIteration(matA, vectorB, 1000);
 		System.out.println(getEigenvalue(matA, vectorB));
 		vectorB.print(8, 6);
 	}
+	
+	static Matrix computeVonMisesIteration(Matrix matrix, Matrix vector, int iterations){
+		for(int i = 0; i<iterations; i++){
+			vector = normalize(matrix.times(vector));
+		}
+		return vector;
+	}
+	
+	
+	static double rayleighQuotient(Matrix matrix, Matrix vector){
+		Matrix quotient = vector.transpose().times(vector).solveTranspose(vector.transpose().times(matrix).times(vector));
+		return quotient.get(0, 0);
+	}
+	static Matrix computeRayleighIteration(Matrix matrix, Matrix vector, int iterations){
+		for(int i = 0; i<iterations; i++){
+			vector = normalize(
+					matrix.minus(
+							identity.times(rayleighQuotient(matrix, vector))
+						).inverse().
+						times(vector)
+					);
+		}
+		return vector;
+	}
+	
+	static Matrix normalize(Matrix vector){
+		return vector.times(1/vector.normF()); //Frobenius norm
+	}
+	
 	static double getEigenvalue(Matrix matrix, Matrix eigenvector){
 		Matrix resultVector = matrix.times(eigenvector);
 		double result = 0;
-		for(int i = 0; i<6; i++){
+		for(int i = 0; i<resultVector.getRowDimension(); i++){
 			result += resultVector.get(i, 0)/eigenvector.get(i,0);
 		}
-		return result/6;
+		return result/resultVector.getRowDimension();
 	}
-	static Matrix normalize(Matrix vector){
-		return vector.times(1/vector.normF());
-	}
-	static Matrix computeVonMisesIteration(Matrix matrix, Matrix vector, int iterations){
-		for(int i = 0; i<iterations; i++){
-			vector = matrix.times(vector);
-			if(i%100 == 0)
-				vector = normalize(vector);
-		}
-		if(iterations-1 % 100 == 0)
-			return vector;
-		else
-			return normalize(vector);
-	}
-	
 }
